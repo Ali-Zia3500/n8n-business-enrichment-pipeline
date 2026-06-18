@@ -1,0 +1,208 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "nwua9Gu5YrADL7ZDj",
+          "mode": "list",
+          "cachedResultName": "Google Maps Scraper (compass/crawler-google-places)",
+          "cachedResultUrl": "https://console.apify.com/actors/nwua9Gu5YrADL7ZDj/input"
+        },
+        "customBody": "={\n  \"includeWebResults\": true,\n  \"language\": \"en\",\n  \"locationQuery\": \"{{ $json.Location }}\",\n  \"maxCrawledPlacesPerSearch\": 30,\n  \"maximumLeadsEnrichmentRecords\": 10,\n  \"scrapeContacts\": true,\n  \"scrapeDirectories\": false,\n  \"scrapeImageAuthors\": false,\n  \"scrapeOrderOnline\": false,\n  \"scrapePlaceDetailPage\": true,\n  \"scrapeReviewsPersonalData\": true,\n  \"scrapeSocialMediaProfiles\": {\n    \"facebooks\": true,\n    \"instagrams\": true,\n    \"twitters\": true,\n    \"youtubes\": true\n  },\n  \"scrapeTableReservationProvider\": false,\n  \"searchStringsArray\": [\n    \"{{ $json['Business Type'] }}\"\n  ],\n  \"skipClosedPlaces\": false,\n  \"verifyLeadsEnrichmentEmails\": true\n}",
+        "timeout": 400
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        144,
+        -672
+      ],
+      "id": "32e80b39-d0c2-4cad-bf9c-a0069f83b64e",
+      "name": "Scrape Google Maps2",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "formTitle": "Business Search",
+        "formDescription": "Enter business type and location to discover businesses",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Business Type",
+              "placeholder": "=e.g., restaurants",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Location",
+              "placeholder": "=e.g., Lahore, Islamabad",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.5,
+      "position": [
+        -80,
+        -672
+      ],
+      "id": "72250926-0ef5-4ff6-a873-e53c94ea6f42",
+      "name": "Get Lead Input2",
+      "webhookId": "38e3b383-3a71-4a93-9523-707e9cd34fd7"
+    },
+    {
+      "parameters": {
+        "resource": "Datasets",
+        "datasetId": "={{ $json.defaultDatasetId }}",
+        "options": {}
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        368,
+        -672
+      ],
+      "id": "871e557f-a27b-4015-99b7-de483b21388c",
+      "name": "Fetch Scraped Leads",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Maps Apify output → 11 Supabase fields\nreturn $input.all().map(item => {\n  const hotel = item.json;\n  \n  return {\n    name: hotel.title || null,\n    placeId: hotel.placeId || null,\n    website: hotel.website || null,\n    googleReviewsUrl: hotel.url || null,\n    facebookUrl: hotel.facebooks?.[0] || null,\n    instagramUrl: hotel.instagrams?.[0] || null,\n    phone: hotel.phone || null,\n    address: hotel.address || null,\n    email: hotel.emails?.[0] || null,\n    youtubeurl: hotel.youtubes?.[0] || null,\n    status: 'ready_for_scraping'\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -672
+      ],
+      "id": "87e8204b-1523-4b6d-9bcc-d0ea76e6952e",
+      "name": "Clean & Format Leads"
+    },
+    {
+      "parameters": {
+        "tableId": "businesses",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $json.name }}"
+            },
+            {
+              "fieldId": "website",
+              "fieldValue": "={{ $json.website }}"
+            },
+            {
+              "fieldId": "placeid",
+              "fieldValue": "={{ $json.placeId }}"
+            },
+            {
+              "fieldId": "googlereviewsurl",
+              "fieldValue": "={{ $json.googleReviewsUrl }}"
+            },
+            {
+              "fieldId": "facebookurl",
+              "fieldValue": "={{ $json.facebookUrl }}"
+            },
+            {
+              "fieldId": "instagramurl",
+              "fieldValue": "={{ $json.instagramUrl }}"
+            },
+            {
+              "fieldId": "phone",
+              "fieldValue": "={{ $json.phone }}"
+            },
+            {
+              "fieldId": "address",
+              "fieldValue": "={{ $json.address }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            },
+            {
+              "fieldId": "youtubeurl",
+              "fieldValue": "={{ $json.youtubeurl }}"
+            },
+            {
+              "fieldId": "status",
+              "fieldValue": "={{ $json.status }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        816,
+        -672
+      ],
+      "id": "09576990-b9ad-4c4b-981c-5f5eace751f0",
+      "name": "INSERT INTO DATABASE"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Scrape Google Maps2": {
+      "main": [
+        [
+          {
+            "node": "Fetch Scraped Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead Input2": {
+      "main": [
+        [
+          {
+            "node": "Scrape Google Maps2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Scraped Leads": {
+      "main": [
+        [
+          {
+            "node": "Clean & Format Leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean & Format Leads": {
+      "main": [
+        [
+          {
+            "node": "INSERT INTO DATABASE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2127e52b-0226-4df4-9523-8860c1f6ca9f",
+  "meta": {
+    "instanceId": "15720733ddd847f73be5044aecddbb30d17c82803c83fde52f2e35d071cd2083"
+  },
+  "nodeGroups": [],
+  "id": "jLlSMsZlLiMXtGE9",
+  "tags": []
+}

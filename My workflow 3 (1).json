@@ -1,0 +1,547 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-found",
+              "leftValue": "={{ $json.facebookurl === '' && $json.instagramurl === '' && $json.youtubeurl === '' && $json.email === '' }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equal"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -224,
+        80
+      ],
+      "id": "281d5d0f-5466-4a1a-b872-06bf5b540489",
+      "name": "Not Found in Website?"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.website }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 5
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -672,
+        80
+      ],
+      "id": "f8dd571b-3957-440e-9e60-d8c81c4d06a6",
+      "name": "Scrape Website (HTTP)1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nlet business;\ntry { business = $('Loop Over Businesses').item.json; }\ncatch (e) { business = $('Loop Over Businesses').first().json; }\n\nconst item = items[0]?.json || {};\nconst html = String(item.data || item.body || item.html || item.text || '');\n\nlet facebookUrl = '', instagramUrl = '', youtubeUrl = '', email = '';\n\nconst FB_JUNK = new Set(['sharer','sharer.php','share','share.php','tr','plugins','dialog','login','help','policies','privacy','terms','campaign','connect','watch','gaming']);\nconst IG_JUNK = new Set(['p','reel','reels','tv','explore','stories','accounts','about','developer','legal','embed','privacy','terms','graphql','api']);\nconst YT_JUNK = new Set(['watch','results','feed','playlist','shorts','trending','premium','about','terms','privacy','music']);\n\nfunction findAll(html, host) {\n  const re = new RegExp('https?://(?:www\\\\.)?' + host + '/[^\"\\'\\\\s<>)\\\\\\\\]+', 'gi');\n  return html.match(re) || [];\n}\nfunction firstSeg(url, host) {\n  const after = url.split(new RegExp(host + '/', 'i'))[1] || '';\n  return after.split('?')[0].split('#')[0].split('/').filter(Boolean);\n}\n\n// Facebook\nconst fbRaws = [...findAll(html, 'facebook\\\\.com'), ...findAll(html, 'fb\\\\.com')];\nfor (const raw of fbRaws) {\n  const prof = raw.match(/facebook\\.com\\/profile\\.php\\?id=\\d+/i);\n  if (prof) { facebookUrl = 'https://www.' + prof[0]; break; }\n  const seg = firstSeg(raw, 'facebook\\\\.com').length ? firstSeg(raw, 'facebook\\\\.com') : firstSeg(raw, 'fb\\\\.com');\n  const first = (seg[0] || '').toLowerCase();\n  if (!first || FB_JUNK.has(first)) continue;\n  facebookUrl = first === 'pages' && seg.length >= 2 ? 'https://www.facebook.com/' + seg.join('/') : 'https://www.facebook.com/' + seg[0];\n  break;\n}\n\n// Instagram\nfor (const raw of findAll(html, 'instagram\\\\.com')) {\n  const seg = firstSeg(raw, 'instagram\\\\.com');\n  const first = (seg[0] || '').toLowerCase();\n  if (!first || IG_JUNK.has(first)) continue;\n  instagramUrl = 'https://www.instagram.com/' + seg[0]; break;\n}\n\n// YouTube\nfor (const raw of findAll(html, 'youtube\\\\.com')) {\n  const seg = firstSeg(raw, 'youtube\\\\.com');\n  const first = (seg[0] || '').toLowerCase();\n  if (!first || YT_JUNK.has(first)) continue;\n  youtubeUrl = 'https://www.youtube.com/' + seg[0]; break;\n}\n\n// Email\nconst skipDomains = ['example.com','sentry.io','wixpress.com','jquery.com','schema.org','w3.org','googleapis.com','gstatic.com','cloudflare.com'];\nconst mailtoMatch = html.match(/mailto:([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})/i);\nif (mailtoMatch) {\n  email = mailtoMatch[1].toLowerCase();\n} else {\n  const emailMatch = html.match(/\\b([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})\\b/);\n  if (emailMatch) {\n    const found = emailMatch[1].toLowerCase();\n    if (!skipDomains.some(d => found.includes(d))) email = found;\n  }\n}\n\nreturn [{ json: { id: business.id, name: business.name, placeid: business.placeid, facebookurl: facebookUrl, instagramurl: instagramUrl, youtubeurl: youtubeUrl, email: email, source: 'http_website' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        80
+      ],
+      "id": "8465294b-eba4-491e-891d-5d708d1ea058",
+      "name": "Extract Social Links from Website2"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "GI054nfChIY9GkgYg",
+          "mode": "list",
+          "cachedResultName": "Website Scraper (snipercoder/website-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/GI054nfChIY9GkgYg/input"
+        },
+        "customBody": "={\n  \"queries\": \"{{ $('Loop Over Businesses').item.json.name }} facebook instagram youtube email Pakistan\",\n  \"maxPagesPerQuery\": 1,\n  \"resultsPerPage\": 10,\n  \"languageCode\": \"en\",\n  \"countryCode\": \"pk\"\n}",
+        "timeout": 60
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "777e96dd-e5cd-4dd8-adf8-b44fa908c953",
+      "name": "Apify: Google Search (Fallback)2",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nlet business;\ntry { business = $('Loop Over Businesses').item.json; }\ncatch (e) { business = $('Loop Over Businesses').first().json; }\n\nconst prevData = $('Extract Social Links from Website2').item.json;\nconst results = items.map(i => i.json).flat();\n\nlet facebookUrl  = prevData.facebookurl  || '';\nlet instagramUrl = prevData.instagramurl || '';\nlet youtubeUrl   = prevData.youtubeurl   || '';\nlet email        = prevData.email        || '';\n\nconst FB_JUNK = new Set(['sharer','share','tr','plugins','dialog','login','help','policies','privacy','terms','watch','gaming']);\nconst IG_JUNK = new Set(['p','reel','reels','explore','accounts','about','legal','privacy','terms']);\nconst YT_JUNK = new Set(['watch','results','feed','playlist','shorts','trending','premium','about','terms','privacy']);\nconst SKIP_EMAIL = ['example.com','sentry.io','wixpress.com','jquery.com','schema.org','w3.org','googleapis.com'];\n\nfunction firstSeg(url, host) {\n  const after = url.split(new RegExp(host + '/', 'i'))[1] || '';\n  return after.split('?')[0].split('#')[0].split('/').filter(Boolean);\n}\n\nconst allUrls = [];\nfor (const r of results) {\n  if (r.url) allUrls.push(r.url);\n  if (r.displayUrl) allUrls.push(r.displayUrl);\n  const desc = r.description || r.snippet || '';\n  const matches = desc.match(/https?:\\/\\/(?:www\\.)?(?:facebook|instagram|youtube)\\.com\\/[^\\s\"'<>]+/gi) || [];\n  allUrls.push(...matches);\n  if (!email) {\n    const em = desc.match(/\\b([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})\\b/);\n    if (em && !SKIP_EMAIL.some(d => em[1].includes(d))) email = em[1].toLowerCase();\n  }\n}\n\nfor (const url of allUrls) {\n  if (!facebookUrl && /facebook\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'facebook\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !FB_JUNK.has(first)) facebookUrl = 'https://www.facebook.com/' + seg[0];\n  }\n  if (!instagramUrl && /instagram\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'instagram\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !IG_JUNK.has(first)) instagramUrl = 'https://www.instagram.com/' + seg[0];\n  }\n  if (!youtubeUrl && /youtube\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'youtube\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !YT_JUNK.has(first)) youtubeUrl = 'https://www.youtube.com/' + seg[0];\n  }\n  if (facebookUrl && instagramUrl && youtubeUrl && email) break;\n}\n\nreturn [{ json: { id: business.id, name: business.name, placeid: business.placeid, facebookurl: facebookUrl, instagramurl: instagramUrl, youtubeurl: youtubeUrl, email: email, source: 'website_then_google' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "402e12fa-3189-4cd1-b435-a84d0da37a2a",
+      "name": "Extract Social Links (Fallback)2"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "businesses",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "placeid",
+              "condition": "eq",
+              "keyValue": "={{ $json.placeid }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "facebookurl",
+              "fieldValue": "={{ $json.facebookurl }}"
+            },
+            {
+              "fieldId": "instagramurl",
+              "fieldValue": "={{ $json.instagramurl }}"
+            },
+            {
+              "fieldId": "youtubeurl",
+              "fieldValue": "={{ $json.youtubeurl }}"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $json.email }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        896,
+        144
+      ],
+      "id": "67d53100-d9fd-45e2-8c43-d8cf70cbf12d",
+      "name": "Update Social Links in Supabase2"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst d = $input.first().json;\nlet existing;\ntry { existing = $('Loop Over Businesses').item.json; }\ncatch(e) { existing = {}; }\n\nconst hasSomething = d.facebookurl || d.instagramurl || d.youtubeurl || d.email ||\n                     existing.facebookurl || existing.instagramurl || existing.youtubeurl || existing.email;\n\nif (!hasSomething) return [{ json: { ...d, skipUpdate: true } }];\nreturn [{ json: { ...d, skipUpdate: false } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        144
+      ],
+      "id": "dbdd0ffb-97b0-42dd-a382-39e1925c4352",
+      "name": "Skip If Nothing Found2"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nlet business;\ntry { business = $('Loop Over Businesses').item.json; }\ncatch (e) { business = $('Loop Over Businesses').first().json; }\n\nconst results = items.map(i => i.json).flat();\nlet facebookUrl = '', instagramUrl = '', youtubeUrl = '', email = '';\n\nconst FB_JUNK = new Set(['sharer','share','tr','plugins','dialog','login','help','policies','privacy','terms','watch','gaming']);\nconst IG_JUNK = new Set(['p','reel','reels','explore','accounts','about','legal','privacy','terms']);\nconst YT_JUNK = new Set(['watch','results','feed','playlist','shorts','trending','premium','about','terms','privacy']);\nconst SKIP_EMAIL = ['example.com','sentry.io','wixpress.com','jquery.com','schema.org','w3.org','googleapis.com'];\n\nfunction firstSeg(url, host) {\n  const after = url.split(new RegExp(host + '/', 'i'))[1] || '';\n  return after.split('?')[0].split('#')[0].split('/').filter(Boolean);\n}\n\nconst allUrls = [];\nfor (const r of results) {\n  if (r.url) allUrls.push(r.url);\n  if (r.displayUrl) allUrls.push(r.displayUrl);\n  const desc = r.description || r.snippet || '';\n  const matches = desc.match(/https?:\\/\\/(?:www\\.)?(?:facebook|instagram|youtube)\\.com\\/[^\\s\"'<>]+/gi) || [];\n  allUrls.push(...matches);\n  if (!email) {\n    const em = desc.match(/\\b([a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})\\b/);\n    if (em && !SKIP_EMAIL.some(d => em[1].includes(d))) email = em[1].toLowerCase();\n  }\n}\n\nfor (const url of allUrls) {\n  if (!facebookUrl && /facebook\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'facebook\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !FB_JUNK.has(first)) facebookUrl = 'https://www.facebook.com/' + seg[0];\n  }\n  if (!instagramUrl && /instagram\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'instagram\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !IG_JUNK.has(first)) instagramUrl = 'https://www.instagram.com/' + seg[0];\n  }\n  if (!youtubeUrl && /youtube\\.com/i.test(url)) {\n    const seg = firstSeg(url, 'youtube\\\\.com');\n    const first = (seg[0] || '').toLowerCase();\n    if (first && !YT_JUNK.has(first)) youtubeUrl = 'https://www.youtube.com/' + seg[0];\n  }\n  if (facebookUrl && instagramUrl && youtubeUrl && email) break;\n}\n\nreturn [{ json: { id: business.id, name: business.name, placeid: business.placeid, facebookurl: facebookUrl, instagramurl: instagramUrl, youtubeurl: youtubeUrl, email: email, source: 'google_search_no_website' } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        288
+      ],
+      "id": "a7faa367-a4aa-4545-87f3-8aeb5980a833",
+      "name": "Extract Social Links (No Website)2"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "GI054nfChIY9GkgYg",
+          "mode": "list",
+          "cachedResultName": "Website Scraper (snipercoder/website-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/GI054nfChIY9GkgYg/input"
+        },
+        "customBody": "={\n  \"queries\": \"{{ $('Loop Over Businesses').item.json.name }} facebook instagram youtube email Pakistan\",\n  \"maxPagesPerQuery\": 1,\n  \"resultsPerPage\": 10,\n  \"languageCode\": \"en\",\n  \"countryCode\": \"pk\"\n}",
+        "timeout": 60
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        0,
+        288
+      ],
+      "id": "dd0b0e44-a4c3-4281-8e37-70e15c4ecb69",
+      "name": "Apify: Google Search (No Website)2",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "businesses",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "facebookurl",
+              "condition": "eq"
+            },
+            {
+              "keyName": "instagramurl",
+              "condition": "eq"
+            },
+            {
+              "keyName": "youtubeurl",
+              "condition": "eq"
+            },
+            {
+              "keyName": "email",
+              "condition": "eq"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -1344,
+        224
+      ],
+      "id": "252b3c93-f2d0-470f-bbba-94b20c2f708b",
+      "name": "Get Businesses Without Social Links2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        288
+      ],
+      "id": "658fbc6a-2644-4b76-9e18-be1c88dd9eff",
+      "name": "Back to Loop"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst item = $input.first().json;\nconsole.log(`Done: ${item.name} | FB: ${item.facebookurl||'-'} | IG: ${item.instagramurl||'-'} | YT: ${item.youtubeurl||'-'} | Email: ${item.email||'-'}`);\nreturn $input.all();\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        144
+      ],
+      "id": "81fd0f05-9e11-4406-9bd2-d34269bf88bc",
+      "name": "Log Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nreturn items.map(item => {\n  const d = item.json;\n  let existing;\n  try { existing = $('Loop Over Businesses').item.json; }\n  catch(e) { existing = {}; }\n  return { json: {\n    id:           d.id,\n    name:         d.name,\n    placeid:      d.placeid,\n    facebookurl:  d.facebookurl  || existing.facebookurl  || '',\n    instagramurl: d.instagramurl || existing.instagramurl || '',\n    youtubeurl:   d.youtubeurl   || existing.youtubeurl   || '',\n    email:        d.email        || existing.email        || '',\n    source:       d.source\n  }};\n});\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        144
+      ],
+      "id": "0f2ff7be-6af9-43c6-9fed-9cd394615bc8",
+      "name": "Prepare for Supabase Update"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-website",
+              "leftValue": "={{ $json.website }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -896,
+        144
+      ],
+      "id": "b6324bba-d8f9-42f6-9d13-27d4a0ad3453",
+      "name": "Has Website?"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -1120,
+        224
+      ],
+      "id": "c767f886-ff34-4667-883c-620735df3a99",
+      "name": "Loop Over Businesses"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1568,
+        224
+      ],
+      "id": "865c5a58-b91e-4864-812b-57c2ec0d0142",
+      "name": "Start"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Not Found in Website?": {
+      "main": [
+        [
+          {
+            "node": "Apify: Google Search (Fallback)2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare for Supabase Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape Website (HTTP)1": {
+      "main": [
+        [
+          {
+            "node": "Extract Social Links from Website2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Social Links from Website2": {
+      "main": [
+        [
+          {
+            "node": "Not Found in Website?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify: Google Search (Fallback)2": {
+      "main": [
+        [
+          {
+            "node": "Extract Social Links (Fallback)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Social Links (Fallback)2": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Supabase Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Social Links in Supabase2": {
+      "main": [
+        [
+          {
+            "node": "Log Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip If Nothing Found2": {
+      "main": [
+        [
+          {
+            "node": "Update Social Links in Supabase2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Social Links (No Website)2": {
+      "main": [
+        [
+          {
+            "node": "Prepare for Supabase Update",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Apify: Google Search (No Website)2": {
+      "main": [
+        [
+          {
+            "node": "Extract Social Links (No Website)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Businesses Without Social Links2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Businesses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Back to Loop": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Businesses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Result": {
+      "main": [
+        [
+          {
+            "node": "Back to Loop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare for Supabase Update": {
+      "main": [
+        [
+          {
+            "node": "Skip If Nothing Found2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Website?": {
+      "main": [
+        [
+          {
+            "node": "Scrape Website (HTTP)1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Apify: Google Search (No Website)2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Businesses": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Has Website?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Get Businesses Without Social Links2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "4423edfd-f371-4aa5-85e7-462dc027be03",
+  "meta": {
+    "instanceId": "15720733ddd847f73be5044aecddbb30d17c82803c83fde52f2e35d071cd2083"
+  },
+  "nodeGroups": [],
+  "id": "ys85w2w4QKjXynl5",
+  "tags": []
+}

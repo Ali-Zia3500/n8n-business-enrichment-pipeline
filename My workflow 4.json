@@ -1,0 +1,781 @@
+{
+  "name": "My workflow 4",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        3136,
+        176
+      ],
+      "id": "2ed6eca3-df4f-4021-ace2-b12c25430a1d",
+      "name": "Back to Loop2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        320,
+        176
+      ],
+      "id": "84041dc7-9971-4837-b180-0d2dfaaed85c",
+      "name": "Loop Over Businesses2"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        224
+      ],
+      "id": "30929612-4c59-4e6b-bb71-a4fb75679929",
+      "name": "Groq Chat Model1"
+    },
+    {
+      "parameters": {
+        "numberInputs": 4
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1664,
+        -32
+      ],
+      "id": "20e80bf6-ffd0-4f4a-98d5-c317d02f0ea4",
+      "name": "Merge All Comments1"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "h7sSZNcPMSe6F6Bkh",
+          "mode": "list",
+          "cachedResultName": "YouTube Comments Scraper (streamers/youtube-comments-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/h7sSZNcPMSe6F6Bkh/input"
+        },
+        "customBody": "={{ JSON.stringify({\n  startUrls: $json.ytVideoUrls.map(url => ({ url: url })),\n  maxComments: 50\n}) }}",
+        "timeout": 180
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        96
+      ],
+      "id": "11124a98-cb7d-4547-aac8-e46b8d2ccbc6",
+      "name": "Fetch YT Comments1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "shu8hvrXbJbY3Eb9W",
+          "mode": "list",
+          "cachedResultName": "Instagram Scraper (apify/instagram-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/shu8hvrXbJbY3Eb9W/input"
+        },
+        "customBody": "={{ JSON.stringify({\n  directUrls: $json.igPostUrls,\n  resultsType: \"comments\",\n  resultsLimit: 50\n}) }}",
+        "timeout": 180
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -96
+      ],
+      "id": "fa3af047-4489-46ee-b5e9-03afaa227c0b",
+      "name": "Fetch IG Comments1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "us5srxAYnsrkgUv2v",
+          "mode": "list",
+          "cachedResultName": "Facebook Comments Scraper (apify/facebook-comments-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/us5srxAYnsrkgUv2v/input"
+        },
+        "customBody": "={{ JSON.stringify({\n  startUrls: $json.fbPostUrls.map(url => ({ url: url })),\n  maxComments: 50,\n  includeNestedComments: false\n}) }}",
+        "timeout": 180
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        -288
+      ],
+      "id": "50f6bc30-501b-46f6-a605-b9c8fefba48f",
+      "name": "Fetch FB Comments1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst videos = items.map(i => i.json).flat();\nconst thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);\n\nconst videoUrls = videos\n  .filter(v => {\n    const d = v.uploadDate || v.date || v.publishedAt || '';\n    if (!d) return true;\n    return new Date(d).getTime() >= thirtyDaysAgo;\n  })\n  .map(v => v.url || v.videoUrl || (v.id ? `https://www.youtube.com/watch?v=${v.id}` : ''))\n  .filter(url => url && url.includes('youtube.com'))\n  .slice(0, 5);\n\nreturn [{ json: {\n  businessId: $('Prepare Business Data1').item.json.id,\n  businessName: $('Prepare Business Data1').item.json.name,\n  placeid: $('Prepare Business Data1').item.json.placeid,\n  facebookurl: $('Prepare Business Data1').item.json.facebookurl,\n  instagramurl: $('Prepare Business Data1').item.json.instagramurl,\n  youtubeurl: $('Prepare Business Data1').item.json.youtubeurl,\n  ytVideoUrls: videoUrls,\n  hasYtVideos: videoUrls.length > 0\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        96
+      ],
+      "id": "0fb17155-827a-4234-afaa-e90a1447efe6",
+      "name": "Extract YT Video URLs1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst posts = items.map(i => i.json).flat();\nconst thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);\n\nconst postUrls = posts\n  .filter(p => {\n    const d = p.timestamp || p.takenAtTimestamp || p.date || '';\n    if (!d) return true;\n    const ts = typeof d === 'number' ? d * 1000 : new Date(d).getTime();\n    return ts >= thirtyDaysAgo;\n  })\n  .map(p => p.url || p.displayUrl || p.shortCode ? `https://www.instagram.com/p/${p.shortCode}/` : '')\n  .filter(url => url && url.includes('instagram.com'))\n  .slice(0, 5);\n\nreturn [{ json: {\n  businessId: $('Prepare Business Data1').item.json.id,\n  businessName: $('Prepare Business Data1').item.json.name,\n  placeid: $('Prepare Business Data1').item.json.placeid,\n  facebookurl: $('Prepare Business Data1').item.json.facebookurl,\n  instagramurl: $('Prepare Business Data1').item.json.instagramurl,\n  youtubeurl: $('Prepare Business Data1').item.json.youtubeurl,\n  igPostUrls: postUrls,\n  hasIgPosts: postUrls.length > 0\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -96
+      ],
+      "id": "cdf567ae-3cc9-429b-96cf-246376986a1f",
+      "name": "Extract IG Post URLs1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst posts = items.map(i => i.json).flat();\nconst thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);\n\nconst postUrls = posts\n  .filter(p => {\n    const d = p.time || p.timestamp || p.date || p.createdAt || '';\n    if (!d) return true;\n    const ts = typeof d === 'number' ? d * 1000 : new Date(d).getTime();\n    return ts >= thirtyDaysAgo;\n  })\n  .map(p => p.url || p.postUrl || p.link || '')\n  .filter(url => url && url.includes('facebook.com'))\n  .slice(0, 5); // max 5 posts to save credits\n\nreturn [{ json: {\n  businessId: $('Prepare Business Data1').item.json.id,\n  businessName: $('Prepare Business Data1').item.json.name,\n  placeid: $('Prepare Business Data1').item.json.placeid,\n  facebookurl: $('Prepare Business Data1').item.json.facebookurl,\n  instagramurl: $('Prepare Business Data1').item.json.instagramurl,\n  youtubeurl: $('Prepare Business Data1').item.json.youtubeurl,\n  fbPostUrls: postUrls,\n  hasFbPosts: postUrls.length > 0\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -288
+      ],
+      "id": "69847347-205e-49eb-9541-db48e832679c",
+      "name": "Extract FB Post URLs1"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "h7sSZNcPMSe6F6Bkh",
+          "mode": "list",
+          "cachedResultName": "YouTube Scraper (streamers/youtube-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/h7sSZNcPMSe6F6Bkh/input"
+        },
+        "customBody": "={\n  \"startUrls\": [{ \"url\": \"{{ $json.youtubeurl }}\" }],\n  \"maxVideos\": 5\n}",
+        "timeout": 120
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        768,
+        96
+      ],
+      "id": "8cd84654-83e5-4f56-963c-9887e0ad693f",
+      "name": "Fetch YT Videos1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "shu8hvrXbJbY3Eb9W",
+          "mode": "list",
+          "cachedResultName": "Instagram Scraper (apify/instagram-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/shu8hvrXbJbY3Eb9W/input"
+        },
+        "customBody": "={\n  \"directUrls\": [\"{{ $json.instagramurl }}\"],\n  \"resultsType\": \"posts\",\n  \"resultsLimit\": 5\n}",
+        "timeout": 120
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -96
+      ],
+      "id": "9ba71eb9-bb3b-46f3-8381-3b8c754b8b69",
+      "name": "Fetch IG Posts1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "KoJrdxJCTtpon81KY",
+          "mode": "list",
+          "cachedResultName": "Facebook Posts Scraper (apify/facebook-posts-scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/KoJrdxJCTtpon81KY/input"
+        },
+        "customBody": "={\n  \"startUrls\": [{ \"url\": \"{{ $json.facebookurl }}\" }],\n  \"resultsLimit\": 5\n}",
+        "timeout": 120
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -288
+      ],
+      "id": "594654c1-bb8f-415c-9914-0a1856519ca9",
+      "name": "Fetch FB Posts1",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst business = $input.first().json;\nreturn [{ json: {\n  id: business.id,\n  name: business.name,\n  placeid: business.placeid,\n  facebookurl: business.facebookurl || '',\n  instagramurl: business.instagramurl || '',\n  youtubeurl: business.youtubeurl || '',\n  googlereviewsurl: business.googlereviewsurl || ''\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        544,
+        -48
+      ],
+      "id": "f4880565-7d6d-4caa-9589-d7348b84280c",
+      "name": "Prepare Business Data1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "businesses",
+        "returnAll": true,
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "facebookurl",
+              "condition": "neq"
+            },
+            {
+              "keyName": "instagramurl",
+              "condition": "neq"
+            },
+            {
+              "keyName": "youtubeurl",
+              "condition": "neq"
+            },
+            {
+              "keyName": "googlereviewsurl",
+              "condition": "neq"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        96,
+        176
+      ],
+      "id": "a45c193e-e0a0-4419-9ce0-3d93b42f05c2",
+      "name": "Get Businesses With Social Links1"
+    },
+    {
+      "parameters": {
+        "jsCode": "console.log(`Done: ${$input.first().json.businessName}`);\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        0
+      ],
+      "id": "1f5dce2c-71a0-413c-8f9f-905d484d069e",
+      "name": "Log Success"
+    },
+    {
+      "parameters": {
+        "sendTo": "hooriajanjua4@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.htmlBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        2688,
+        0
+      ],
+      "id": "1c17aa40-e4e7-427c-930b-f7d55e574aa5",
+      "name": "Send Email",
+      "webhookId": "36e64dc5-60b4-42ca-9264-cc718e918acb"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst llmResponse = $input.first().json;\nconst merged = $('Combine All Data').item.json;\n\nlet summaryText = '';\ntry { summaryText = llmResponse.output || llmResponse.content?.[0]?.text || ''; }\ncatch(e) { summaryText = 'Could not generate summary.'; }\n\nconst now = new Date().toLocaleDateString('en-PK', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'\n});\n\nconst htmlBody = `\n<html><body style=\"font-family: Arial, sans-serif; max-width: 700px; margin: auto; color: #333;\">\n<div style=\"background: #1877F2; padding: 20px; border-radius: 8px 8px 0 0;\">\n  <h1 style=\"color: white; margin: 0; font-size: 22px;\">📊 Monthly Social Media Report</h1>\n  <p style=\"color: #cce4ff; margin: 4px 0 0 0; font-size: 14px;\">${now}</p>\n</div>\n<div style=\"background: #f8f9fa; padding: 20px; border-left: 4px solid #1877F2;\">\n  <h2 style=\"margin: 0 0 4px 0; font-size: 18px;\">${merged.businessName}</h2>\n  <p style=\"margin: 0; font-size: 13px; color: #666;\">\n    🔗 <a href=\"${merged.facebookurl}\">Facebook</a> &nbsp;|&nbsp;\n    📸 <a href=\"${merged.instagramurl}\">Instagram</a> &nbsp;|&nbsp;\n    ▶️ <a href=\"${merged.youtubeurl}\">YouTube</a> &nbsp;|&nbsp;\n    ⭐ Google Reviews\n  </p>\n  <p style=\"margin: 8px 0 0 0; font-size: 13px; color: #888;\">\n    Analyzed: <strong>${merged.fbCommentCount}</strong> FB &nbsp;+&nbsp;\n    <strong>${merged.igCommentCount}</strong> IG &nbsp;+&nbsp;\n    <strong>${merged.ytCommentCount}</strong> YT &nbsp;+&nbsp;\n    <strong>${merged.googleCommentCount}</strong> Google Reviews (last 30 days)\n  </p>\n</div>\n<div style=\"background: white; padding: 24px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px;\">\n  <div style=\"white-space: pre-line; line-height: 1.7; font-size: 15px;\">${summaryText}</div>\n</div>\n<p style=\"font-size: 12px; color: #aaa; text-align: center; margin-top: 16px;\">\n  Generated automatically by Social Analytics Workflow\n</p>\n</body></html>`;\n\nreturn [{ json: {\n  businessName: merged.businessName,\n  subject: `📊 Monthly Report: ${merged.businessName} (FB:${merged.fbCommentCount} | IG:${merged.igCommentCount} | YT:${merged.ytCommentCount} | G:${merged.googleCommentCount})`,\n  htmlBody: htmlBody\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2464,
+        0
+      ],
+      "id": "a683fcdc-335d-4d04-b71c-374fcba8bf1c",
+      "name": "Build Email"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the Facebook, Instagram, YouTube and Google Reviews comments for \"{{ $json.businessName }}\" from the last 30 days.\n\nFACEBOOK COMMENTS ({{ $json.fbCommentCount }} total):\n{{ $json.fbComments.map((c, i) => (i+1) + '. [' + c.author + ']: ' + c.text).join('\\n') || 'No comments found.' }}\n\nINSTAGRAM COMMENTS ({{ $json.igCommentCount }} total):\n{{ $json.igComments.map((c, i) => (i+1) + '. [' + c.author + ']: ' + c.text).join('\\n') || 'No comments found.' }}\n\nYOUTUBE COMMENTS ({{ $json.ytCommentCount }} total):\n{{ $json.ytComments.map((c, i) => (i+1) + '. [' + c.author + ']: ' + c.text).join('\\n') || 'No comments found.' }}\n\nGOOGLE REVIEWS ({{ $json.googleCommentCount }} total):\n{{ $json.googleComments.map((c, i) => (i+1) + '. [' + c.author + ']: ' + c.text).join('\\n') || 'No reviews found.' }}\n\nGive four separate summaries — one per platform.",
+        "options": {
+          "systemMessage": "You are a professional social media analyst for businesses in Pakistan.\n\nAlways follow this EXACT format:\n\nFACEBOOK SUMMARY:\n[3-5 sentences: sentiment, main topics, complaints/praises, one actionable insight]\n\nINSTAGRAM SUMMARY:\n[3-5 sentences: sentiment, main topics, complaints/praises, one actionable insight]\n\nYOUTUBE SUMMARY:\n[3-5 sentences: sentiment, main topics, complaints/praises, one actionable insight]\n\nGOOGLE REVIEWS SUMMARY:\n[3-5 sentences: sentiment, main topics, complaints/praises, one actionable insight]\n\nOVERALL SENTIMENT:\nFacebook: [Positive / Neutral / Negative / Mixed]\nInstagram: [Positive / Neutral / Negative / Mixed]\nYouTube: [Positive / Neutral / Negative / Mixed]\nGoogle: [Positive / Neutral / Negative / Mixed]\n\nTOP KEYWORDS:\nFacebook: [5 keywords]\nInstagram: [5 keywords]\nYouTube: [5 keywords]\nGoogle: [5 keywords]\n\nRules:\n- Simple professional English\n- Be specific about what customers said\n- If no comments: write 'No comments available this period'\n- Never make up data"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        2112,
+        0
+      ],
+      "id": "5084e141-e875-432b-8aef-d1fb040101e5",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst all = $input.all();\n\nconst fbData  = all.find(i => i.json.platform === 'facebook') || { json: { comments: [], commentCount: 0 } };\nconst igData  = all.find(i => i.json.platform === 'instagram') || { json: { comments: [], commentCount: 0 } };\nconst ytData  = all.find(i => i.json.platform === 'youtube') || { json: { comments: [], commentCount: 0 } };\nconst gData   = all.find(i => i.json.platform === 'google') || { json: { comments: [], commentCount: 0, ratingOnlyCounts: {} } };\n\nconst business = fbData.json.businessId ? fbData.json\n  : (igData.json.businessId ? igData.json\n  : (ytData.json.businessId ? ytData.json : gData.json));\n\nreturn [{ json: {\n  businessId:       business.businessId || business.id,\n  businessName:     business.businessName || business.name,\n  facebookurl:      business.facebookurl  || '',\n  instagramurl:     business.instagramurl || '',\n  youtubeurl:       business.youtubeurl   || '',\n  fbComments:       fbData.json.comments  || [],\n  fbCommentCount:   fbData.json.commentCount || 0,\n  igComments:       igData.json.comments  || [],\n  igCommentCount:   igData.json.commentCount || 0,\n  ytComments:       ytData.json.comments  || [],\n  ytCommentCount:   ytData.json.commentCount || 0,\n  googleComments:   gData.json.comments   || [],\n  googleCommentCount: gData.json.commentCount || 0,\n  googleRatingOnly: gData.json.ratingOnlyCounts || {}\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1888,
+        0
+      ],
+      "id": "46039aa6-6f17-46ba-a025-0fdc720ef2a0",
+      "name": "Combine All Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst business = $('Extract YT Video URLs1').item.json;\nconst allComments = items.map(i => Array.isArray(i.json) ? i.json : [i.json]).flat();\n\nconst comments = allComments\n  .map(c => ({\n    text: c.text || c.textDisplay || c.comment || '',\n    date: c.publishedAt || c.date || '',\n    likes: c.likeCount || c.likes || 0,\n    author: c.authorDisplayName || c.username || 'Unknown'\n  }))\n  .filter(c => c.text && c.text.trim().length > 0)\n  .slice(0, 80);\n\nreturn [{ json: {\n  platform: 'youtube',\n  businessId: business.businessId,\n  businessName: business.businessName,\n  placeid: business.placeid,\n  facebookurl: business.facebookurl,\n  instagramurl: business.instagramurl,\n  youtubeurl: business.youtubeurl,\n  comments: comments,\n  commentCount: comments.length\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        96
+      ],
+      "id": "784fe961-ed8a-46bb-9f4a-18e7d47183c9",
+      "name": "Process YT Comments"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst business = $('Extract IG Post URLs1').item.json;\nconst allComments = items.map(i => Array.isArray(i.json) ? i.json : [i.json]).flat();\n\nconst comments = allComments\n  .map(c => ({\n    text: c.text || c.comment || '',\n    date: c.timestamp || c.date || c.createdAt || '',\n    likes: c.likesCount || c.likes || 0,\n    author: c.ownerUsername || c.username || 'Unknown'\n  }))\n  .filter(c => c.text && c.text.trim().length > 0)\n  .slice(0, 80);\n\nreturn [{ json: {\n  platform: 'instagram',\n  businessId: business.businessId,\n  businessName: business.businessName,\n  placeid: business.placeid,\n  facebookurl: business.facebookurl,\n  instagramurl: business.instagramurl,\n  youtubeurl: business.youtubeurl,\n  comments: comments,\n  commentCount: comments.length\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -96
+      ],
+      "id": "99c37b9d-8a67-4cad-99d2-191d5992fe23",
+      "name": "Process IG Comments"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst items = $input.all();\nconst business = $('Extract FB Post URLs1').item.json;\nconst allComments = items.map(i => Array.isArray(i.json) ? i.json : [i.json]).flat();\n\nconst comments = allComments\n  .map(c => ({\n    text: c.text || c.comment || c.message || '',\n    date: c.date || c.createdAt || c.timestamp || '',\n    likes: c.likesCount || c.likes || 0,\n    author: c.authorName || c.profileName || c.username || 'Unknown'\n  }))\n  .filter(c => c.text && c.text.trim().length > 0)\n  .slice(0, 80);\n\nreturn [{ json: {\n  platform: 'facebook',\n  businessId: business.businessId,\n  businessName: business.businessName,\n  placeid: business.placeid,\n  facebookurl: business.facebookurl,\n  instagramurl: business.instagramurl,\n  youtubeurl: business.youtubeurl,\n  comments: comments,\n  commentCount: comments.length\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        -288
+      ],
+      "id": "03a18adf-d955-4731-815c-7930a19587b5",
+      "name": "Process FB Comments"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -128,
+        176
+      ],
+      "id": "1f29fe52-024b-4430-8b68-bcb21ff56b22",
+      "name": "Run Every Week"
+    },
+    {
+      "parameters": {
+        "operation": "Run actor and get dataset",
+        "actorSource": "store",
+        "actorId": {
+          "__rl": true,
+          "value": "Xb8osYTtOjlsgI6k9",
+          "mode": "list",
+          "cachedResultName": "Google Maps Reviews Scraper (compass/Google-Maps-Reviews-Scraper)",
+          "cachedResultUrl": "https://console.apify.com/actors/Xb8osYTtOjlsgI6k9/input"
+        },
+        "customBody": "={\n  \"maxReviews\": 50,\n  \"personalData\": true,\n  \"startUrls\": [{ \"url\": \"{{ $json.googlereviewsurl }}\" }]\n}",
+        "timeout": 300
+      },
+      "type": "@apify/n8n-nodes-apify.apify",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        288
+      ],
+      "id": "95153e9f-c126-4fcc-a668-a579d38b8feb",
+      "name": "Fetch Google Reviews",
+      "credentials": {},
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst reviews = $input.all();\nlet business;\ntry { business = $('Prepare Business Data1').item.json; }\ncatch(e) { business = {}; }\n\nconst writtenReviews = [];\nconst ratingOnlyCounts = {};\n\nreviews.forEach(item => {\n  const review = item.json;\n  const stars = review.stars || null;\n  const text = review.text ? review.text.trim() : null;\n  if (text) {\n    writtenReviews.push({ text: `${stars} stars: \"${text}\"`, author: review.name || 'Unknown', date: review.publishedAtDate || '' });\n  } else if (stars) {\n    ratingOnlyCounts[stars] = (ratingOnlyCounts[stars] || 0) + 1;\n  }\n});\n\nconst comments = writtenReviews.map(r => ({\n  text: r.text,\n  author: r.author,\n  date: r.date,\n  likes: 0\n})).slice(0, 80);\n\nreturn [{ json: {\n  platform: 'google',\n  businessId: business.id,\n  businessName: business.name,\n  placeid: business.placeid,\n  facebookurl: business.facebookurl,\n  instagramurl: business.instagramurl,\n  youtubeurl: business.youtubeurl,\n  comments: comments,\n  commentCount: comments.length,\n  ratingOnlyCounts: ratingOnlyCounts\n}}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        288
+      ],
+      "id": "8fe42746-6e84-43db-aede-89aa8f946604",
+      "name": "Process Google Reviews"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Back to Loop2": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Businesses2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Businesses2": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Prepare Business Data1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge All Comments1": {
+      "main": [
+        [
+          {
+            "node": "Combine All Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch YT Comments1": {
+      "main": [
+        [
+          {
+            "node": "Process YT Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch IG Comments1": {
+      "main": [
+        [
+          {
+            "node": "Process IG Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch FB Comments1": {
+      "main": [
+        [
+          {
+            "node": "Process FB Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract YT Video URLs1": {
+      "main": [
+        [
+          {
+            "node": "Fetch YT Comments1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract IG Post URLs1": {
+      "main": [
+        [
+          {
+            "node": "Fetch IG Comments1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract FB Post URLs1": {
+      "main": [
+        [
+          {
+            "node": "Fetch FB Comments1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch YT Videos1": {
+      "main": [
+        [
+          {
+            "node": "Extract YT Video URLs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch IG Posts1": {
+      "main": [
+        [
+          {
+            "node": "Extract IG Post URLs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch FB Posts1": {
+      "main": [
+        [
+          {
+            "node": "Extract FB Post URLs1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Business Data1": {
+      "main": [
+        [
+          {
+            "node": "Fetch YT Videos1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch IG Posts1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch FB Posts1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Google Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Businesses With Social Links1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Businesses2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          {
+            "node": "Back to Loop2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Log Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Build Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine All Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process YT Comments": {
+      "main": [
+        [
+          {
+            "node": "Merge All Comments1",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Process IG Comments": {
+      "main": [
+        [
+          {
+            "node": "Merge All Comments1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Process FB Comments": {
+      "main": [
+        [
+          {
+            "node": "Merge All Comments1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Every Week": {
+      "main": [
+        [
+          {
+            "node": "Get Businesses With Social Links1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Google Reviews": {
+      "main": [
+        [
+          {
+            "node": "Process Google Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Google Reviews": {
+      "main": [
+        [
+          {
+            "node": "Merge All Comments1",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a1358ea2-fd45-4bf7-b3cb-57c6f351a7ad",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "15720733ddd847f73be5044aecddbb30d17c82803c83fde52f2e35d071cd2083"
+  },
+  "nodeGroups": [],
+  "id": "ys85w2w4QKjXynl5",
+  "tags": []
+}
